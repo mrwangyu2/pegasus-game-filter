@@ -2,7 +2,7 @@
 
 A desktop application for managing and filtering Pegasus Frontend game ROMs.
 
-[中文版](readme.md) | [English]
+[中文版](doc/readme.md) | [English]
 
 ## Features
 
@@ -107,6 +107,7 @@ Roms/                           # ROM Root
   - [Deployment & Packaging](doc/deployment_en.md)
   - [Architecture & Implementation](doc/implementation_en.md)
   - [Project Structure](doc/structure_en.md)
+
 
 ## License
 

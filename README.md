@@ -2,6 +2,8 @@
 
 一个用于管理和筛选天马G（Pegasus Frontend）游戏ROM的桌面应用程序。
 
+![Demo](doc/gif/demo.gif)
+
 [中文版] | [English](doc/readme_en.md)
 
 ## 功能特性

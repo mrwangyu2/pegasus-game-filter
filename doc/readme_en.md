@@ -2,6 +2,8 @@
 
 A desktop application for managing and filtering Pegasus Frontend game ROMs.
 
+![Demo](doc/gif/demo.gif)
+
 [中文版](doc/readme.md) | [English]
 
 ## Features

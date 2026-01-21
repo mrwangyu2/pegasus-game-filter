@@ -25,19 +25,23 @@
 
 ### 方案 B：源码运行 (开发者)
 
-```bash
 # 1. 克隆项目
+```bash
 git clone https://github.com/mrwangyu2/pegasus-game-filter.git
 cd pegasus-game-filter
+```
 
 # 2. 安装依赖
+```bash
 pip install -r requirements.txt
+```
 
 # 3. 安装视频解码器 (必需)
-# 为了支持程序内的视频预览播放，请务必安装 LAVFilters：
-# 下载地址：https://github.com/Nevcairiel/LAVFilters/releases
+为了支持程序内的视频预览播放，请务必安装 LAVFilters：
+下载地址：https://github.com/Nevcairiel/LAVFilters/releases
 
 # 4. 运行程序
+```bash
 python main.py
 ```
 
@@ -54,6 +58,7 @@ python main.py
    - 在左侧列表中浏览所有游戏。
    - 点击游戏可查看右侧的封面图和预览视频。
    - **运行游戏**：双击列表中的游戏条目，程序将尝试调用系统关联的模拟器或程序打开该 ROM 文件。
+   - **注意**：为了确保游戏能正常运行，建议配合天马G完整版资源使用。您可以从 [Archmage83/game_collection](https://github.com/Archmage83/game_collection) 下载完整版资源。
 
 3. **选择游戏**
    - 使用空格键选择游戏（再次按空格取消选择）
@@ -94,19 +99,25 @@ Roms/                           # ROM根目录
 | 快捷键 | 功能 | 说明 |
 |--------|------|------|
 | **Tab** | 切换视图 | 在来源目录和项目目录间切换 |
-| **Space** | 选择/取消 | 切换当前游戏的选择状态 |
-| **↑/↓** | 浏览游戏 | 上一个/下一个游戏 |
-| **A** | 添加到任务 | 将选中的游戏加入任务队列 |
-| **D** | 删除任务 | 将选中的游戏加入删除队列 |
-| **F5** | 执行任务 | 统一执行任务队列中的所有任务 |
-| **Ctrl+N** | 新建项目 | 创建新项目 |
-| **Ctrl+O** | 打开项目 | 打开已有项目 |
-| **Ctrl+S** | 保存项目 | 保存当前项目 |
+| **Space** | 选择/取消 | 切换当前游戏的选择状态（多选） |
+| **Enter/Return** | 播放预览 | 播放当前选中的游戏视频预览 |
+| **J / K** | 浏览游戏 | 下一个 / 上一个游戏（Vim 风格） |
+| **PageUp / Down**| 翻页浏览 | 快速上下翻页 |
+| **F5** | 执行任务 | 统一执行任务队列（复制或删除） |
+| **Ctrl+R** | 运行游戏 | 调用模拟器运行选中的游戏 |
+| **Ctrl+F** | 搜索定位 | 焦点跳转到搜索框 |
+| **Ctrl+B** | 批量添加 | 打开批量搜索并添加对话框 |
+| **Ctrl+E** | 元数据管理 | 编辑项目元数据或查看来源元数据 |
+| **Ctrl+Shift+C** | 清空任务 | 清空当前待执行的任务队列 |
+| **Alt+Up/Down** | 切换平台 | 在不同的游戏平台间快速切换 |
+| **Ctrl+Alt+L/G** | 切换语言 | 快速切换中/英文界面 |
+| **Ctrl+Alt+0-9** | 切换主题 | 快速切换不同的 UI 配色方案 |
 
 ## 开发者信息
 
 - **版本**: 1.0.1
 - **开发者**: 王宇
+- **邮箱**: wangyuxxx@163.com
 - **技术栈**: Python 3, PyQt5
 - **项目文档**:
   - [快速部署与打包](doc/deployment.md)

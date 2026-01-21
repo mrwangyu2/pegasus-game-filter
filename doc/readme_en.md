@@ -25,19 +25,23 @@ If you are a regular user, it is recommended to download the latest `.zip` packa
 
 ### Option B: Run from Source (Developers)
 
-```bash
 # 1. Clone the repository
+```bash
 git clone https://github.com/mrwangyu2/pegasus-game-filter.git
 cd pegasus-game-filter
+```
 
 # 2. Install dependencies
+```bash
 pip install -r requirements.txt
+```
 
 # 3. Install Video Decoders (Required)
-# To enable in-app video preview, please install LAVFilters:
-# Download: https://github.com/Nevcairiel/LAVFilters/releases
+To enable in-app video preview, please install LAVFilters:
+Download: https://github.com/Nevcairiel/LAVFilters/releases
 
 # 4. Run the application
+```bash
 python main.py
 ```
 
@@ -54,6 +58,7 @@ python main.py
    - Browse all games in the list.
    - Click a game to see its cover and video preview.
    - **Run Game**: Double-click a game entry to launch it using the system's associated emulator.
+   - **Note**: To ensure games run correctly, it is recommended to use the full Pegasus-G collection. You can download it from [Archmage83/game_collection](https://github.com/Archmage83/game_collection).
 
 3. **Select Games**
    - Press Space to select/deselect a game (selected games have a yellow background).
@@ -91,19 +96,26 @@ Roms/                           # ROM Root
 | Hotkey | Function | Description |
 |--------|----------|-------------|
 | **Tab** | Toggle View | Switch between Source and Project views |
-| **Space** | Select/Deselect | Toggle selection status for current game |
-| **↑/↓** | Navigate | Move up/down the game list |
-| **A** | Add to Task | Queue selected games for addition |
-| **D** | Remove Task | Queue selected games for removal |
-| **F5** | Execute | Execute all pending tasks |
-| **Ctrl+N** | New Project | Create a new project |
-| **Ctrl+O** | Open Project | Open an existing project |
-| **Ctrl+S** | Save Project | Save current project configuration |
+| **Space** | Select/Deselect | Toggle selection status for current game (Multi-select) |
+| **Enter/Return** | Play Preview | Play the video preview of the current game |
+| **J / K** | Navigate | Move down / up the game list (Vim style) |
+| **PageUp / Down**| Page Nav | Quickly scroll through the game list |
+| **F5** | Execute | Execute all pending tasks (Copy or Delete) |
+| **Ctrl+R** | Run Game | Launch the selected game using an emulator |
+| **Ctrl+F** | Focus Search | Jump focus to the search box |
+| **Ctrl+B** | Batch Add | Open the batch search and add dialog |
+| **Ctrl+E** | Metadata | Edit project metadata or view source metadata |
+| **Ctrl+Shift+C** | Clear Tasks | Clear all pending tasks in the queue |
+| **Alt+Up/Down** | Switch Platform| Quickly toggle between different platforms |
+| **Ctrl+Alt+L/G** | Language | Toggle between Chinese and English |
+| **Ctrl+Alt+0-9** | Theme | Switch between different UI themes |
+
 
 ## Developer Info
 
 - **Version**: 1.0.1
 - **Developer**: Wang Yu
+- **Email**: wangyuxxx@163.com
 - **Tech Stack**: Python 3, PyQt5
 - **Documentation**:
   - [Deployment & Packaging](doc/deployment_en.md)

@@ -25,22 +25,22 @@ If you are a regular user, it is recommended to download the latest `.zip` packa
 
 ### Option B: Run from Source (Developers)
 
-# 1. Clone the repository
+#### 1. Clone the repository
 ```bash
 git clone https://github.com/mrwangyu2/pegasus-game-filter.git
 cd pegasus-game-filter
 ```
 
-# 2. Install dependencies
+#### 2. Install dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-# 3. Install Video Decoders (Required)
+#### 3. Install Video Decoders (Required)
 To enable in-app video preview, please install LAVFilters:
 Download: https://github.com/Nevcairiel/LAVFilters/releases
 
-# 4. Run the application
+#### 4. Run the application
 ```bash
 python main.py
 ```

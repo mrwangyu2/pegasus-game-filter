@@ -25,22 +25,22 @@
 
 ### 方案 B：源码运行 (开发者)
 
-# 1. 克隆项目
+#### 1. 克隆项目
 ```bash
 git clone https://github.com/mrwangyu2/pegasus-game-filter.git
 cd pegasus-game-filter
 ```
 
-# 2. 安装依赖
+#### 2. 安装依赖
 ```bash
 pip install -r requirements.txt
 ```
 
-# 3. 安装视频解码器 (必需)
+#### 3. 安装视频解码器 (必需)
 为了支持程序内的视频预览播放，请务必安装 LAVFilters：
 下载地址：https://github.com/Nevcairiel/LAVFilters/releases
 
-# 4. 运行程序
+#### 4. 运行程序
 ```bash
 python main.py
 ```

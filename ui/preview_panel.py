@@ -3,7 +3,7 @@
 """
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QTextEdit, QPushButton)
-from PyQt5.QtCore import pyqtSignal, Qt, QUrl
+from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QEvent
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
 from PyQt5.QtMultimediaWidgets import QVideoWidget
@@ -94,6 +94,7 @@ class PreviewPanel(QWidget):
         self.video_widget = QVideoWidget()
         self.video_widget.setFixedSize(320, 220)
         self.video_widget.hide()
+        self.video_widget.installEventFilter(self)
         content_layout.addWidget(self.video_widget)
 
         self.playlist = QMediaPlaylist()
@@ -171,7 +172,8 @@ class PreviewPanel(QWidget):
                     self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(full_path))))
                     self.playlist.setCurrentIndex(0)
                     self.video_widget.show()
-                    self.media_player.play()
+                    # 不自动播放，避免 DirectShow 解码器问题导致崩溃
+                    # 用户可以点击视频区域手动播放
                     return
                 except Exception:
                     self._video_init_failed = True
@@ -180,6 +182,21 @@ class PreviewPanel(QWidget):
             self.media_player.stop()
         except Exception:
             pass
+
+    def eventFilter(self, obj, event):
+        """点击视频区域切换播放/暂停"""
+        if obj == self.video_widget and event.type() == QEvent.MouseButtonPress:
+            if self.media_player and not self._video_init_failed:
+                try:
+                    if self.media_player.state() == QMediaPlayer.PlayingState:
+                        self.media_player.pause()
+                    else:
+                        self.media_player.play()
+                except Exception:
+                    self._video_init_failed = True
+                    self.video_widget.hide()
+            return True
+        return super().eventFilter(obj, event)
 
     def stop_video(self):
         try:

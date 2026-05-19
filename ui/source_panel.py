@@ -73,9 +73,24 @@ class SourcePanel(QWidget):
         self.platform_combo.blockSignals(True)
         self.platform_combo.clear()
         self.platform_combo.addItem(tr("all_platforms"), "")
+        max_text = tr("all_platforms")
         for p in sorted(platforms):
             self.platform_combo.addItem(p, p)
+            if len(p) > len(max_text):
+                max_text = p
         self.platform_combo.blockSignals(False)
+        self._adjust_combo_width(max_text)
+
+    def _adjust_combo_width(self, max_text: str):
+        fm = self.platform_combo.fontMetrics()
+        width = fm.horizontalAdvance(max_text + "     ") + 30
+        width = max(width, 120)
+        self.platform_combo.setMinimumWidth(width)
+        try:
+            view = self.platform_combo.view()
+            view.setMinimumWidth(width + 20)
+        except Exception:
+            pass
 
     def set_existing_checker(self, checker):
         """设置已存在检测回调（返回 True 表示收藏中已存在）"""

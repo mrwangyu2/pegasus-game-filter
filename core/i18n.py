@@ -137,7 +137,15 @@ class Translator:
             "log_finished": "任务执行完成",
             "log_failed": "任务执行失败: {error}",
             "warning": "警告",
-            "success": "成功"
+            "success": "成功",
+            "source_title": "来源 ROM",
+            "collection_title": "收藏 ROM",
+            "preview_panel": "预览面板",
+            "copy_complete": "已复制 {count} 个游戏",
+            "delete_complete": "已删除 {count} 个游戏",
+            "confirm_delete_title": "确认删除",
+            "confirm_delete_msg": "确认删除以下游戏？ROM 文件和媒体资源将被永久删除。\n\n{names}",
+            "run_game": "运行游戏"
         },
         LANG_EN: {
             "app_title": "Pegasus Game Filter v1.0",
@@ -264,7 +272,15 @@ class Translator:
             "log_finished": "Execution finished",
             "log_failed": "Execution failed: {error}",
             "warning": "Warning",
-            "success": "Success"
+            "success": "Success",
+            "source_title": "Source ROMs",
+            "collection_title": "Collection ROMs",
+            "preview_panel": "Preview Panel",
+            "copy_complete": "Copied {count} game(s)",
+            "delete_complete": "Deleted {count} game(s)",
+            "confirm_delete_title": "Confirm Delete",
+            "confirm_delete_msg": "Delete the following games? ROM files and media will be permanently deleted.\n\n{names}",
+            "run_game": "Run Game"
         }
     }
 

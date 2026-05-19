@@ -1,22 +1,13 @@
 """
 底部可折叠预览面板（内嵌视频播放）
 """
-import os
-import ctypes
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QTextEdit, QPushButton)
 from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QEvent
 from PyQt5.QtGui import QPixmap
-from core.i18n import tr
-
-# 在 Qt Multimedia 加载前通过 C 运行时强制 WMF 后端
-try:
-    ctypes.cdll.msvcrt._putenv(b"QT_MULTIMEDIA_PREFERRED_PLUGINS=wmfengine")
-except Exception:
-    os.environ["QT_MULTIMEDIA_PREFERRED_PLUGINS"] = "wmfengine"
-
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
 from PyQt5.QtMultimediaWidgets import QVideoWidget
+from core.i18n import tr
 
 
 class PreviewPanel(QWidget):
@@ -104,18 +95,13 @@ class PreviewPanel(QWidget):
         self.video_widget.installEventFilter(self)
         content_layout.addWidget(self.video_widget)
 
-        try:
-            self.playlist = QMediaPlaylist()
-            self.playlist.setPlaybackMode(QMediaPlaylist.Loop)
-            self.media_player = QMediaPlayer(None)
-            self.media_player.setPlaylist(self.playlist)
-            self.media_player.setVideoOutput(self.video_widget)
-            self._video_ok = True
-            self.media_player.error.connect(self._on_media_error)
-        except Exception:
-            self._video_ok = False
-            self.playlist = None
-            self.media_player = None
+        self.playlist = QMediaPlaylist()
+        self.playlist.setPlaybackMode(QMediaPlaylist.Loop)
+        self._video_ok = True
+        self.media_player = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+        self.media_player.setPlaylist(self.playlist)
+        self.media_player.setVideoOutput(self.video_widget)
+        self.media_player.error.connect(self._on_media_error)
 
         main_layout.addWidget(self.content)
 
@@ -177,9 +163,6 @@ class PreviewPanel(QWidget):
         self.cover_label.setPixmap(QPixmap())
 
     def _load_video(self, game):
-        if not self._video_ok:
-            self.video_widget.hide()
-            return
         video_path = game.get_video_path()
         if video_path and game.platform_path:
             full_path = game.platform_path / video_path
@@ -192,11 +175,10 @@ class PreviewPanel(QWidget):
                     self.media_player.play()
                     return
                 except Exception:
-                    self._video_ok = False
+                    pass
         self.video_widget.hide()
         try:
-            if self.media_player:
-                self.media_player.stop()
+            self.media_player.stop()
         except Exception:
             pass
 

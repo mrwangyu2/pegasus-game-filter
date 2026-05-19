@@ -58,6 +58,89 @@ class GameManager:
                 return True
         return False
     
+    def add_game(self, source_game: Game, progress_callback=None) -> bool:
+        """直接添加一个游戏到收藏集，执行完整的文件复制流程"""
+        platform = source_game.platform
+        platform_path = self.roms_root / platform
+        platform_path.mkdir(parents=True, exist_ok=True)
+
+        # 创建 media 目录
+        media_dir_name = Path(source_game.file).stem or source_game.game
+        media_dir = platform_path / "media" / media_dir_name
+        media_dir.mkdir(parents=True, exist_ok=True)
+
+        # 复制游戏文件
+        source_file = source_game.platform_path / source_game.file
+        dest_file = platform_path / source_game.file
+        if source_file.exists():
+            shutil.copy2(source_file, dest_file)
+
+        # 复制 logo
+        logo_path = source_game.get_logo_path()
+        if logo_path and logo_path.exists():
+            shutil.copy2(logo_path, media_dir / logo_path.name)
+
+        # 复制封面
+        boxfront_path = source_game.get_boxfront_path()
+        if boxfront_path and boxfront_path.exists():
+            shutil.copy2(boxfront_path, media_dir / boxfront_path.name)
+
+        # 复制视频
+        video_path = source_game.get_video_path()
+        if video_path and video_path.exists():
+            shutil.copy2(video_path, media_dir / video_path.name)
+
+        # 合并 Header 配置
+        project_header = self.headers.get(platform, "")
+        try:
+            source_header, _ = MetadataParser.parse_platform_directory(source_game.platform_path)
+            merged_header = MetadataParser.merge_header_fields(
+                project_header, source_header,
+                ["collection", "sort-by", "extensions", "launch"], platform
+            )
+            if merged_header != project_header:
+                self.headers[platform] = merged_header
+        except Exception:
+            pass
+
+        # 更新游戏列表和元数据文件
+        new_game = self._create_game_copy(source_game, platform_path)
+        self._upsert_platform_game(platform, new_game)
+
+        metadata_file = platform_path / "metadata.pegasus.txt"
+        header = self.headers.get(platform, "")
+        MetadataParser.write_metadata(self.platforms[platform], metadata_file, header)
+
+        return True
+
+    def remove_game(self, game: Game) -> bool:
+        """直接删除一个游戏及其媒体资源"""
+        platform = game.platform
+        platform_path = self.roms_root / platform
+
+        # 删除游戏文件
+        game_file = platform_path / game.file
+        if game_file.exists():
+            game_file.unlink()
+
+        # 删除 media 目录
+        media_dir_name = Path(game.file).stem or game.game
+        media_dir = platform_path / "media" / media_dir_name
+        if media_dir.exists():
+            shutil.rmtree(media_dir)
+
+        # 从列表中移除并更新元数据
+        if platform in self.platforms:
+            self.platforms[platform] = [
+                g for g in self.platforms[platform]
+                if g.game != game.game
+            ]
+            metadata_file = platform_path / "metadata.pegasus.txt"
+            header = self.headers.get(platform, "")
+            MetadataParser.write_metadata(self.platforms[platform], metadata_file, header)
+
+        return True
+
     def execute_tasks(self) -> dict:
         """执行任务队列中的所有任务"""
         results = {

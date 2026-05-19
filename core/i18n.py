@@ -145,7 +145,8 @@ class Translator:
             "delete_complete": "已删除 {count} 个游戏",
             "confirm_delete_title": "确认删除",
             "confirm_delete_msg": "确认删除以下游戏？ROM 文件和媒体资源将被永久删除。\n\n{names}",
-            "run_game": "运行游戏"
+            "run_game": "运行游戏",
+            "play_video": "播放视频"
         },
         LANG_EN: {
             "app_title": "Pegasus Game Filter v1.0",
@@ -280,7 +281,8 @@ class Translator:
             "delete_complete": "Deleted {count} game(s)",
             "confirm_delete_title": "Confirm Delete",
             "confirm_delete_msg": "Delete the following games? ROM files and media will be permanently deleted.\n\n{names}",
-            "run_game": "Run Game"
+            "run_game": "Run Game",
+            "play_video": "Play Video"
         }
     }
 

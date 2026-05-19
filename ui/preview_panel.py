@@ -1,12 +1,11 @@
 """
 底部可折叠预览面板
 """
+import os
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QTextEdit, QPushButton)
-from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QEvent
+from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
-from PyQt5.QtMultimediaWidgets import QVideoWidget
 from core.i18n import tr
 
 
@@ -21,6 +20,7 @@ class PreviewPanel(QWidget):
         self.current_game = None
         self._editable = False
         self._collapsed = True
+        self._video_path = None
         self._init_ui()
         self.setVisible(False)
 
@@ -85,37 +85,27 @@ class PreviewPanel(QWidget):
         self.run_btn = QPushButton(tr("run_game"))
         self.run_btn.clicked.connect(lambda: self.run_game_clicked.emit(self.current_game))
         btn_layout.addWidget(self.run_btn)
+
+        # 播放视频按钮
+        self.play_video_btn = QPushButton("▶ " + tr("play_video"))
+        self.play_video_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3; color: white;
+                border-radius: 4px; padding: 6px 14px;
+                font-weight: bold;
+            }
+            QPushButton:hover { background-color: #1976D2; }
+            QPushButton:disabled { background-color: #888; }
+        """)
+        self.play_video_btn.clicked.connect(self._open_video_external)
+        self.play_video_btn.setEnabled(False)
+        btn_layout.addWidget(self.play_video_btn)
+
         btn_layout.addStretch()
         info_layout.addLayout(btn_layout)
 
         content_layout.addWidget(info_widget, stretch=1)
-
-        # 右侧：视频
-        self.video_widget = QVideoWidget()
-        self.video_widget.setFixedSize(320, 220)
-        self.video_widget.hide()
-        self.video_widget.installEventFilter(self)
-        content_layout.addWidget(self.video_widget)
-
-        self.playlist = QMediaPlaylist()
-        self.playlist.setPlaybackMode(QMediaPlaylist.Loop)
-        self.media_player = QMediaPlayer(None, QMediaPlayer.VideoSurface)
-        self.media_player.setPlaylist(self.playlist)
-        self.media_player.setVideoOutput(self.video_widget)
-        self._video_init_failed = False
-        self.media_player.error.connect(self._on_media_error)
-
         main_layout.addWidget(self.content)
-
-    def _init_video_lazy(self):
-        """已废弃 - 视频组件现在直接初始化"""
-        pass
-
-    def _on_media_error(self, error):
-        """处理媒体播放错误，避免崩溃"""
-        if error != QMediaPlayer.NoError:
-            self._video_init_failed = True
-            self.video_widget.hide()
 
     def _toggle(self):
         self._collapsed = not self._collapsed
@@ -139,13 +129,18 @@ class PreviewPanel(QWidget):
         self.desc_edit.setReadOnly(not editable)
 
         self._load_cover(game)
-        self._load_video(game)
+        self._check_video(game)
 
         self.edit_btn.setVisible(editable)
 
     def hide_panel(self):
         self.setVisible(False)
-        self.stop_video()
+        self._video_path = None
+        self.play_video_btn.setEnabled(False)
+
+    def stop_video(self):
+        """兼容旧接口，无操作"""
+        pass
 
     def _load_cover(self, game):
         cover_path = game.get_boxfront_path()
@@ -159,54 +154,26 @@ class PreviewPanel(QWidget):
         self.cover_label.setText(tr("no_cover"))
         self.cover_label.setPixmap(QPixmap())
 
-    def _load_video(self, game):
-        if self._video_init_failed:
-            self.video_widget.hide()
-            return
+    def _check_video(self, game):
+        """检测是否有可播放的视频文件"""
+        self._video_path = None
         video_path = game.get_video_path()
         if video_path and game.platform_path:
             full_path = game.platform_path / video_path
             if full_path.exists():
-                try:
-                    self.playlist.clear()
-                    self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(full_path))))
-                    self.playlist.setCurrentIndex(0)
-                    self.video_widget.show()
-                    self.media_player.play()
-                    return
-                except Exception:
-                    self._video_init_failed = True
-        self.video_widget.hide()
-        try:
-            self.media_player.stop()
-        except Exception:
-            pass
+                self._video_path = full_path
+                self.play_video_btn.setEnabled(True)
+                return
+        self.play_video_btn.setEnabled(False)
 
-    def eventFilter(self, obj, event):
-        """点击视频区域切换播放/暂停"""
-        if obj == self.video_widget and event.type() == QEvent.MouseButtonPress:
-            if self.media_player and not self._video_init_failed:
-                try:
-                    if self.media_player.state() == QMediaPlayer.PlayingState:
-                        self.media_player.pause()
-                    else:
-                        self.media_player.play()
-                except Exception:
-                    self._video_init_failed = True
-                    self.video_widget.hide()
-            return True
-        return super().eventFilter(obj, event)
-
-    def stop_video(self):
-        try:
-            self.media_player.stop()
-            self.media_player.setMedia(QMediaContent())
-            self.playlist.clear()
-        except Exception:
-            pass
+    def _open_video_external(self):
+        """使用系统默认播放器打开视频"""
+        if self._video_path and self._video_path.exists():
+            os.startfile(str(self._video_path))
 
     def retranslate_ui(self):
         arrow = "▲" if self._collapsed else "▼"
         self.toggle_btn.setText(f"{arrow}  {tr('preview_panel')}")
         self.edit_btn.setText(tr("edit_metadata"))
         self.run_btn.setText(tr("run_game"))
+        self.play_video_btn.setText("▶ " + tr("play_video"))

@@ -6,9 +6,6 @@
 
 import sys
 import os
-
-# 必须在 PyQt5 导入前设置，切换媒体后端为 WMF 避免 DirectShow 解码问题
-os.environ["QT_MULTIMEDIA_PREFERRED_PLUGINS"] = "wmfengine"
 import ctypes
 from pathlib import Path
 from ui.main_window import MainWindow

@@ -227,17 +227,35 @@ class MainWindow(QMainWindow):
 
     # ─── 核心操作：复制 / 删除 ───
 
+    def _make_progress(self, title, total):
+        from PyQt5.QtWidgets import QProgressDialog
+        progress = QProgressDialog(title, tr("cancel"), 0, total, self)
+        progress.setWindowTitle(title)
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+        self._apply_dialog_theme(progress)
+        return progress
+
     def copy_games(self, games):
         if not games or not self.collection_manager:
             return
+        total = len(games)
+        progress = self._make_progress(tr("copy_selection"), total)
         count = 0
         self.dual_panel.stop_preview()
-        for game in games:
+        for i, game in enumerate(games):
+            progress.setValue(i)
+            progress.setLabelText(f"{game.game}  [{game.platform}]")
+            QApplication.processEvents()
+            if progress.wasCanceled():
+                break
             try:
                 self.collection_manager.add_game(game)
                 count += 1
             except Exception as e:
                 QMessageBox.warning(self, tr("error"), f"复制失败: {game.game} - {e}")
+        progress.setValue(total)
         self.collection_manager.load_all_platforms()
         self.dual_panel.refresh_collection(
             self.collection_manager.get_all_games(),
@@ -256,14 +274,22 @@ class MainWindow(QMainWindow):
         )
         if reply != QMessageBox.Yes:
             return
+        total = len(games)
+        progress = self._make_progress(tr("delete_selection"), total)
         count = 0
         self.dual_panel.stop_preview()
-        for game in games:
+        for i, game in enumerate(games):
+            progress.setValue(i)
+            progress.setLabelText(f"{game.game}  [{game.platform}]")
+            QApplication.processEvents()
+            if progress.wasCanceled():
+                break
             try:
                 self.collection_manager.remove_game(game)
                 count += 1
             except Exception as e:
                 QMessageBox.warning(self, tr("error"), f"删除失败: {game.game} - {e}")
+        progress.setValue(total)
         self.collection_manager.load_all_platforms()
         self.dual_panel.refresh_collection(
             self.collection_manager.get_all_games(),

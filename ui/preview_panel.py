@@ -101,8 +101,20 @@ class PreviewPanel(QWidget):
         self.media_player = QMediaPlayer(None, QMediaPlayer.VideoSurface)
         self.media_player.setPlaylist(self.playlist)
         self.media_player.setVideoOutput(self.video_widget)
+        self._video_init_failed = False
+        self.media_player.error.connect(self._on_media_error)
 
         main_layout.addWidget(self.content)
+
+    def _init_video_lazy(self):
+        """已废弃 - 视频组件现在直接初始化"""
+        pass
+
+    def _on_media_error(self, error):
+        """处理媒体播放错误，避免崩溃"""
+        if error != QMediaPlayer.NoError:
+            self._video_init_failed = True
+            self.video_widget.hide()
 
     def _toggle(self):
         self._collapsed = not self._collapsed
@@ -147,23 +159,35 @@ class PreviewPanel(QWidget):
         self.cover_label.setPixmap(QPixmap())
 
     def _load_video(self, game):
+        if self._video_init_failed:
+            self.video_widget.hide()
+            return
         video_path = game.get_video_path()
         if video_path and game.platform_path:
             full_path = game.platform_path / video_path
             if full_path.exists():
-                self.playlist.clear()
-                self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(full_path))))
-                self.playlist.setCurrentIndex(0)
-                self.video_widget.show()
-                self.media_player.play()
-                return
+                try:
+                    self.playlist.clear()
+                    self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(full_path))))
+                    self.playlist.setCurrentIndex(0)
+                    self.video_widget.show()
+                    self.media_player.play()
+                    return
+                except Exception:
+                    self._video_init_failed = True
         self.video_widget.hide()
-        self.media_player.stop()
+        try:
+            self.media_player.stop()
+        except Exception:
+            pass
 
     def stop_video(self):
-        self.media_player.stop()
-        self.media_player.setMedia(QMediaContent())
-        self.playlist.clear()
+        try:
+            self.media_player.stop()
+            self.media_player.setMedia(QMediaContent())
+            self.playlist.clear()
+        except Exception:
+            pass
 
     def retranslate_ui(self):
         arrow = "▲" if self._collapsed else "▼"

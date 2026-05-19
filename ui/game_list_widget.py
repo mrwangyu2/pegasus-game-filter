@@ -372,7 +372,8 @@ class GameListWidget(QWidget):
         if current_game in self.selected_games:
             self.selected_games.remove(current_game)
         else:
-            if self.duplicate_checker and self.duplicate_checker(current_game):
+            checker = self.duplicate_checker or self.existing_checker
+            if checker and checker(current_game):
                 QMessageBox.warning(self, tr("info"), tr("duplicate_warning"))
                 return
             self.selected_games.add(current_game)
@@ -394,7 +395,8 @@ class GameListWidget(QWidget):
         """全选当前列表中的游戏"""
         for game in self.filtered_games:
             # 如果设置了重复检测（来源视图），则跳过已存在的游戏
-            if self.duplicate_checker and self.duplicate_checker(game):
+            checker = self.duplicate_checker or self.existing_checker
+            if checker and checker(game):
                 continue
             self.selected_games.add(game)
 

@@ -5,7 +5,7 @@
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
                              QLineEdit, QLabel, QHBoxLayout, QComboBox, QApplication,
                              QShortcut, QMessageBox)
-from PyQt5.QtCore import Qt, pyqtSignal, QSize, QEvent
+from PyQt5.QtCore import Qt, pyqtSignal, QSize, QEvent, QTimer
 from PyQt5.QtGui import QIcon, QPixmap, QKeySequence, QColor
 from typing import List, Set, Optional
 from core.metadata_parser import Game
@@ -31,6 +31,9 @@ class GameListWidget(QWidget):
         # 批量加载配置
         self.batch_size: int = 300
         self.visible_count: int = 0
+
+        # Temporary compatibility stubs (removed in Task 8)
+        self.autoplay_timer = QTimer()
 
         self.init_ui()
 
@@ -138,6 +141,10 @@ class GameListWidget(QWidget):
     def set_existing_checker(self, checker):
         """设置已存在检测回调（返回 True 表示目标中已存在）"""
         self.existing_checker = checker
+
+    def set_task_queue(self, task_queue):
+        """[deprecated] No-op stub, task queue removed. Remove after MainWindow rewrite."""
+        pass
 
     def update_list(self):
         """更新列表显示（批量渲染，触底追加）"""

@@ -58,8 +58,11 @@ class GameManager:
                 return True
         return False
     
-    def add_game(self, source_game: Game, progress_callback=None) -> bool:
+    def add_game(self, source_game: Game) -> bool:
         """直接添加一个游戏到收藏集，执行完整的文件复制流程"""
+        if self.has_game(source_game):
+            return False
+
         platform = source_game.platform
         platform_path = self.roms_root / platform
         platform_path.mkdir(parents=True, exist_ok=True)
@@ -100,8 +103,8 @@ class GameManager:
             )
             if merged_header != project_header:
                 self.headers[platform] = merged_header
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Warning: header merge failed for platform {platform}: {e}")
 
         # 更新游戏列表和元数据文件
         new_game = self._create_game_copy(source_game, platform_path)

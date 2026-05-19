@@ -90,6 +90,7 @@ class CollectionPanel(QWidget):
         self.game_list.apply_filters()
 
     def _on_platform_changed(self, index):
+        self.game_list.set_platform_filter(self.platform_combo.currentData() or "")
         self.game_list.apply_filters()
         self.game_list.list_widget.setFocus()
 

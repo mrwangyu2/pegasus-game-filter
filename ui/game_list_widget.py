@@ -3,10 +3,9 @@
 """
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-                             QLineEdit, QLabel, QHBoxLayout, QComboBox, QApplication,
-                             QShortcut, QMessageBox)
+                             QMessageBox)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QEvent, QTimer
-from PyQt5.QtGui import QIcon, QPixmap, QKeySequence, QColor
+from PyQt5.QtGui import QIcon, QColor
 from typing import List, Set, Optional
 from core.metadata_parser import Game
 from core.i18n import tr
@@ -28,61 +27,21 @@ class GameListWidget(QWidget):
         self.duplicate_checker = None  # 检查项目中是否已存在（源面板用）
         self.existing_checker = None   # 检查目标中是否已存在（集合面板用）
         self.filter_text: str = ""
+        self.platform_filter: str = ""  # 由面板设置，不内置 UI
         # 批量加载配置
         self.batch_size: int = 300
         self.visible_count: int = 0
 
-        # Temporary compatibility stubs (removed in Task 8)
         self.autoplay_timer = QTimer()
 
         self.init_ui()
 
     def init_ui(self):
-        """初始化UI"""
+        """初始化UI（搜索/平台过滤由面板层提供）"""
         self.setMinimumWidth(380)
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
         self.setLayout(layout)
-
-        # 搜索与平台筛选
-        search_layout = QHBoxLayout()
-        self.search_label = QLabel(tr("search_label"))
-        search_layout.addWidget(self.search_label)
-
-        self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("输入游戏名称、平台或开发者...")
-        self.search_box.textChanged.connect(self.on_search_text_changed)
-        search_layout.addWidget(self.search_box)
-
-        self.platform_label_ui = QLabel(tr("platform_label"))
-        search_layout.addWidget(self.platform_label_ui)
-
-        self.platform_combo = QComboBox()
-        self.platform_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
-        self.platform_combo.addItem(tr("all_platforms"), "")
-        self.platform_combo.currentIndexChanged.connect(self.on_platform_changed)
-        search_layout.addWidget(self.platform_combo)
-
-        layout.addLayout(search_layout)
-
-        # 统计
-        self.count_label = QLabel(tr("game_count_label", total=0, selected=0))
-        layout.addWidget(self.count_label)
-
-        # 平台与搜索快捷键
-        self.shortcut_p = QShortcut(QKeySequence("Ctrl+P"), self)
-        self.shortcut_p.setContext(Qt.ApplicationShortcut)
-        self.shortcut_p.activated.connect(self.focus_platform_combo)
-
-        self.shortcut_f = QShortcut(QKeySequence("Ctrl+F"), self)
-        self.shortcut_f.setContext(Qt.ApplicationShortcut)
-        self.shortcut_f.activated.connect(self.focus_search_box)
-
-        self.shortcut_l = QShortcut(QKeySequence("Ctrl+L"), self)
-        self.shortcut_l.setContext(Qt.ApplicationShortcut)
-        self.shortcut_l.activated.connect(self.focus_game_list)
-
-        QShortcut(QKeySequence("Alt+Up"), self, self.prev_platform)
-        QShortcut(QKeySequence("Alt+Down"), self, self.next_platform)
 
         # 列表
         self.list_widget = QListWidget()
@@ -98,14 +57,6 @@ class GameListWidget(QWidget):
         self.setFocusProxy(self.list_widget)
         layout.addWidget(self.list_widget)
 
-        # 提示标签
-        self.hint_label = QLabel(tr("hint_label"))
-        self.hint_label.setStyleSheet("color: #555; font-size: 8.5pt; line-height: 140%;")
-        self.hint_label.setWordWrap(True)
-        self.hint_label.setTextFormat(Qt.RichText)
-        self.hint_label.setAlignment(Qt.AlignLeft | Qt.AlignTop)
-        layout.addWidget(self.hint_label)
-
     def _get_selection_colors(self):
         """根据当前主题返回选中项的背景和前景颜色"""
         theme = getattr(self.window(), "current_theme", "light") if self.window() else "light"
@@ -120,12 +71,6 @@ class GameListWidget(QWidget):
 
     def retranslate_ui(self):
         """刷新UI文字"""
-        self.search_label.setText(tr("search_label"))
-        self.search_box.setPlaceholderText(tr("search_placeholder"))
-        self.platform_label_ui.setText(tr("platform_label"))
-        # 下拉框需要特殊处理第一个元素
-        self.platform_combo.setItemText(0, tr("all_platforms"))
-        self.hint_label.setText(tr("hint_label"))
         self.update_count_label()
 
     def set_games(self, games: List[Game]):
@@ -233,95 +178,18 @@ class GameListWidget(QWidget):
         item.setData(Qt.UserRole, game)
         self.list_widget.addItem(item)
 
-    def focus_platform_combo(self):
-        """聚焦平台选择框并展开"""
-        self.platform_combo.setFocus()
-        self.platform_combo.showPopup()
-
-    def focus_search_box(self):
-        """聚焦搜索框"""
-        self.search_box.setFocus()
-        self.search_box.selectAll()
-
-    def focus_game_list(self):
-        """聚焦游戏列表"""
-        # 强制激活窗口并设置焦点
-        self.list_widget.activateWindow()
-        self.list_widget.setFocus(Qt.OtherFocusReason)
-        if self.list_widget.count() > 0:
-            if not self.list_widget.currentItem():
-                self.list_widget.setCurrentRow(0)
-            else:
-                # 确保当前项可见并被视觉选中
-                self.list_widget.scrollToItem(self.list_widget.currentItem())
-
-    def next_platform(self):
-        """切换到下一个平台"""
-        count = self.platform_combo.count()
-        if count <= 1:
-            return
-        current = self.platform_combo.currentIndex()
-        next_idx = (current + 1) % count
-        self.platform_combo.setCurrentIndex(next_idx)
-
-    def prev_platform(self):
-        """切换到上一个平台"""
-        count = self.platform_combo.count()
-        if count <= 1:
-            return
-        current = self.platform_combo.currentIndex()
-        prev_idx = (current - 1 + count) % count
-        self.platform_combo.setCurrentIndex(prev_idx)
+    def set_platform_filter(self, platform: str):
+        """由面板调用来设置平台过滤"""
+        self.platform_filter = platform
 
     def update_count_label(self):
-        """更新计数标签"""
-        total = len(self.filtered_games)
-        selected = len(self.selected_games)
-        self.count_label.setText(tr("game_count_label", total=total, selected=selected))
-
-    def set_platforms(self, platforms: List[str]):
-        """更新平台下拉列表"""
-        self.platform_combo.blockSignals(True)
-        self.platform_combo.clear()
-        self.platform_combo.addItem(tr("all_platforms"), "")
-        max_text = tr("all_platforms")
-        for platform in sorted(platforms):
-            self.platform_combo.addItem(platform, platform)
-            if len(platform) > len(max_text):
-                max_text = platform
-        self.platform_combo.setCurrentIndex(0)
-        self.platform_combo.blockSignals(False)
-        self._adjust_platform_combo_width(max_text)
-        self.apply_filters()
-
-    def _adjust_platform_combo_width(self, max_text: str):
-        """根据最长平台名称调整下拉宽度"""
-        fm = self.platform_combo.fontMetrics()
-        width = fm.horizontalAdvance(max_text + "  ") + 24  # 文本+左右内边距
-        width = max(width, 140)
-        self.platform_combo.setMinimumWidth(width)
-        self.platform_combo.setMinimumContentsLength(len(max_text) + 2)
-        try:
-            view = self.platform_combo.view()
-            view.setMinimumWidth(width + 20)
-        except Exception:
-            pass
-
-    def on_search_text_changed(self, text: str):
-        """搜索框文本变更事件"""
-        self.filter_text = text or ""
-        self.apply_filters()
-
-    def on_platform_changed(self, index: int):
-        """平台下拉选择变更"""
-        self.apply_filters()
-        self.list_widget.setFocus()
-        self.platform_changed.emit(self.get_current_platform() or "")
+        """计数已移至面板层，保留空方法以兼容旧调用"""
+        pass
 
     def apply_filters(self):
-        """应用搜索与平台筛选"""
+        """应用搜索与平台筛选（筛选条件由面板设置）"""
         text = (self.filter_text or "").strip().lower()
-        selected_platform = self.platform_combo.currentData()
+        selected_platform = self.platform_filter or ""
         filtered = []
         for game in self.games:
             platform_name = (game.platform or "")
@@ -349,10 +217,6 @@ class GameListWidget(QWidget):
         if current:
             return current.data(Qt.UserRole)
         return None
-
-    def get_current_platform(self) -> str:
-        """获取当前选择的平台"""
-        return self.platform_combo.currentData()
 
     def on_item_double_clicked(self, item: QListWidgetItem):
         """双击列表项：切换选择并播放视频"""

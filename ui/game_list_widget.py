@@ -3,100 +3,67 @@
 """
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-                             QLineEdit, QLabel, QHBoxLayout, QComboBox, QProgressBar, QApplication,
-                             QProgressDialog, QPushButton, QShortcut, QMessageBox)
-from PyQt5.QtCore import Qt, pyqtSignal, QSize, QEvent, QTimer
+                             QLineEdit, QLabel, QHBoxLayout, QComboBox, QApplication,
+                             QShortcut, QMessageBox)
+from PyQt5.QtCore import Qt, pyqtSignal, QSize, QEvent
 from PyQt5.QtGui import QIcon, QPixmap, QKeySequence, QColor
 from typing import List, Set, Optional
 from core.metadata_parser import Game
-from core.task_system import TaskQueue, TaskType
 from core.i18n import tr
-from core.theme import apply_titlebar_theme
 
 
 class GameListWidget(QWidget):
     """游戏列表组件"""
-    
+
     game_selected = pyqtSignal(Game)
-    game_activated = pyqtSignal(Game) # 新增激活信号（回车或双击）
+    game_activated = pyqtSignal(Game)  # 新增激活信号（回车或双击）
     selection_changed = pyqtSignal(set)  # 发送选中的游戏集合
     platform_changed = pyqtSignal(str)   # 发送当前选择的平台名称
-    
+
     def __init__(self):
         super().__init__()
         self.games: List[Game] = []
         self.filtered_games: List[Game] = []
         self.selected_games: Set[Game] = set()
-        self.task_queue: Optional[TaskQueue] = None
-        self.duplicate_checker = None  # 检查项目中是否已存在
+        self.duplicate_checker = None  # 检查项目中是否已存在（源面板用）
+        self.existing_checker = None   # 检查目标中是否已存在（集合面板用）
         self.filter_text: str = ""
-        # 分页配置
-        self.page_size: int = 200
-        self.current_page: int = 1
-        self.loading_dialog: Optional[QProgressDialog] = None
-        
-        # 自动播放定时器
-        self.autoplay_timer = QTimer()
-        self.autoplay_timer.setSingleShot(True)
-        self.autoplay_timer.setInterval(3000) # 5秒
-        self.autoplay_timer.timeout.connect(self._on_autoplay_timeout)
-        
+        # 批量加载配置
+        self.batch_size: int = 300
+        self.visible_count: int = 0
+
         self.init_ui()
-    
+
     def init_ui(self):
         """初始化UI"""
         self.setMinimumWidth(380)
         layout = QVBoxLayout()
         self.setLayout(layout)
-        
+
         # 搜索与平台筛选
         search_layout = QHBoxLayout()
         self.search_label = QLabel(tr("search_label"))
         search_layout.addWidget(self.search_label)
-        
+
         self.search_box = QLineEdit()
         self.search_box.setPlaceholderText("输入游戏名称、平台或开发者...")
         self.search_box.textChanged.connect(self.on_search_text_changed)
         search_layout.addWidget(self.search_box)
-        
+
         self.platform_label_ui = QLabel(tr("platform_label"))
         search_layout.addWidget(self.platform_label_ui)
-        
+
         self.platform_combo = QComboBox()
         self.platform_combo.setSizeAdjustPolicy(QComboBox.AdjustToContents)
         self.platform_combo.addItem(tr("all_platforms"), "")
         self.platform_combo.currentIndexChanged.connect(self.on_platform_changed)
         search_layout.addWidget(self.platform_combo)
-        
+
         layout.addLayout(search_layout)
-        
+
         # 统计
         self.count_label = QLabel(tr("game_count_label", total=0, selected=0))
         layout.addWidget(self.count_label)
-
-        # 分页信息与按钮同一行
-        pager_layout = QHBoxLayout()
-        self.pagination_label = QLabel(tr("pagination_label", current=0, total_pages=0, start=0, end=0, total=0))
-        self.pagination_label.setStyleSheet("color: #666; font-size: 9pt;")
-        pager_layout.addWidget(self.pagination_label)
-        pager_layout.addStretch()
-
-        self.prev_page_btn = QPushButton(tr("prev_page"))
-        self.prev_page_btn.clicked.connect(self.prev_page)
-        self.prev_page_btn.setEnabled(False)
-        pager_layout.addWidget(self.prev_page_btn)
-
-        self.next_page_btn = QPushButton(tr("next_page"))
-        self.next_page_btn.clicked.connect(self.next_page)
-        self.next_page_btn.setEnabled(False)
-        pager_layout.addWidget(self.next_page_btn)
-        layout.addLayout(pager_layout)
-
-        # 翻页快捷键
-        QShortcut(QKeySequence(Qt.Key_PageUp), self, self.prev_page)
-        QShortcut(QKeySequence(Qt.Key_PageDown), self, self.next_page)
-        QShortcut(QKeySequence(Qt.CTRL + Qt.Key_Left), self, self.prev_page)
-        QShortcut(QKeySequence(Qt.CTRL + Qt.Key_Right), self, self.next_page)
 
         # 平台与搜索快捷键
         self.shortcut_p = QShortcut(QKeySequence("Ctrl+P"), self)
@@ -113,7 +80,7 @@ class GameListWidget(QWidget):
 
         QShortcut(QKeySequence("Alt+Up"), self, self.prev_platform)
         QShortcut(QKeySequence("Alt+Down"), self, self.next_platform)
-        
+
         # 列表
         self.list_widget = QListWidget()
         self.list_widget.setIconSize(QSize(48, 48))
@@ -127,7 +94,7 @@ class GameListWidget(QWidget):
         self.setFocusPolicy(Qt.StrongFocus)
         self.setFocusProxy(self.list_widget)
         layout.addWidget(self.list_widget)
-        
+
         # 提示标签
         self.hint_label = QLabel(tr("hint_label"))
         self.hint_label.setStyleSheet("color: #555; font-size: 8.5pt; line-height: 140%;")
@@ -155,80 +122,47 @@ class GameListWidget(QWidget):
         self.platform_label_ui.setText(tr("platform_label"))
         # 下拉框需要特殊处理第一个元素
         self.platform_combo.setItemText(0, tr("all_platforms"))
-        self.prev_page_btn.setText(tr("prev_page"))
-        self.next_page_btn.setText(tr("next_page"))
         self.hint_label.setText(tr("hint_label"))
         self.update_count_label()
-        # 刷新分页标签
-        total = len(self.filtered_games)
-        total_pages = (total + self.page_size - 1) // self.page_size if total > 0 else 0
-        start_index = 0 if total == 0 else (self.current_page - 1) * self.page_size
-        end_index = min(start_index + self.page_size, total)
-        self._update_pagination_label(total_pages, total, start_index, end_index)
-    
+
     def set_games(self, games: List[Game]):
         """设置游戏列表"""
         self.games = games
         self.selected_games.clear()
-        self.apply_filters(show_loading=True, message="正在加载游戏...")
-    
-    def set_task_queue(self, task_queue: TaskQueue):
-        """设置任务队列"""
-        self.task_queue = task_queue
+        self.apply_filters()
 
     def set_duplicate_checker(self, checker):
         """设置重复检测回调，返回True表示已存在"""
         self.duplicate_checker = checker
 
-    def update_list(self):
-        """更新列表显示（分页渲染）"""
-        total = len(self.filtered_games)
-        total_pages = (total + self.page_size - 1) // self.page_size if total > 0 else 0
-        if total_pages == 0:
-            self.current_page = 1
-        else:
-            self.current_page = max(1, min(self.current_page, total_pages))
+    def set_existing_checker(self, checker):
+        """设置已存在检测回调（返回 True 表示目标中已存在）"""
+        self.existing_checker = checker
 
-        start_index = 0 if total == 0 else (self.current_page - 1) * self.page_size
-        end_index = min(start_index + self.page_size, total)
+    def update_list(self):
+        """更新列表显示（批量渲染，触底追加）"""
+        total = len(self.filtered_games)
+        load_count = min(self.batch_size, total)
+        self.visible_count = load_count
 
         current_game = self.get_current_game()
         self.list_widget.setUpdatesEnabled(False)
         self.list_widget.clear()
 
-        for game in self.filtered_games[start_index:end_index]:
-            item_text = f"{game.game}"
-            if game.platform:
-                item_text += f" [{game.platform}]"
-
-            # 如果文件缺失，添加标记
-            if game.is_file_missing:
-                item_text = f"⚠ {item_text}"
-
-            item = QListWidgetItem(item_text)
-
-            logo_path = game.get_logo_path()
-            if logo_path and logo_path.exists():
-                icon = QIcon(str(logo_path))
-                item.setIcon(icon)
-
-            # 文件缺失显红
-            if game.is_file_missing:
-                item.setForeground(QColor("#ff4d4f"))
-
-            if game in self.selected_games:
-                bg, fg = self._get_selection_colors()
-                item.setBackground(bg)
-                item.setForeground(fg)
-
-            item.setData(Qt.UserRole, game)
-            self.list_widget.addItem(item)
+        for game in self.filtered_games[:load_count]:
+            self._render_game_item(game)
 
         self.list_widget.setUpdatesEnabled(True)
         self._restore_current_item(current_game)
         self.update_count_label()
-        self._update_pagination_label(total_pages, total, start_index, end_index)
-        self._update_page_buttons(total_pages)
+
+        # 连接到滚动条以支持触底加载
+        scrollbar = self.list_widget.verticalScrollBar()
+        try:
+            scrollbar.valueChanged.disconnect(self._on_scroll)
+        except TypeError:
+            pass
+        scrollbar.valueChanged.connect(self._on_scroll)
 
     def _restore_current_item(self, game):
         """在重新渲染后恢复当前选中项"""
@@ -240,53 +174,57 @@ class GameListWidget(QWidget):
                 self.list_widget.setCurrentItem(item)
                 break
 
-    def _start_loading(self, message: str):
-        """显示加载进度（模态弹窗）"""
-        if self.loading_dialog is None:
-            self.loading_dialog = QProgressDialog(message, None, 0, 0, self.window())
-            self.loading_dialog.setCancelButton(None)
-            self.loading_dialog.setWindowTitle("请稍候")
-            self.loading_dialog.setWindowModality(Qt.ApplicationModal)
-            self.loading_dialog.setMinimumDuration(0)
-            self.loading_dialog.setAutoClose(False)
-            self.loading_dialog.setAutoReset(False)
-            self.loading_dialog.setLabelText(message)
-            theme = getattr(self.window(), "current_theme", None)
-            if theme:
-                apply_titlebar_theme(self.loading_dialog, theme)
-        else:
-            self.loading_dialog.setLabelText(message)
-        self.loading_dialog.show()
-        QApplication.processEvents()
-
-    def _finish_loading(self):
-        """隐藏加载进度"""
-        if self.loading_dialog:
-            self.loading_dialog.hide()
-            self.loading_dialog.deleteLater()
-            self.loading_dialog = None
-        QApplication.processEvents()
-
-    def _update_pagination_label(self, total_pages: int, total: int, start_index: int, end_index: int):
-        """更新分页信息"""
-        if total == 0:
-            self.pagination_label.setText(tr("pagination_label", current=0, total_pages=0, start=0, end=0, total=0))
+    def _on_scroll(self, value):
+        """滚动条变化事件，触底时加载更多"""
+        scrollbar = self.list_widget.verticalScrollBar()
+        if scrollbar.maximum() == 0:
             return
-        current_page = self.current_page
-        self.pagination_label.setText(
-            tr("pagination_label", 
-               current=current_page, 
-               total_pages=total_pages, 
-               start=start_index + 1, 
-               end=end_index, 
-               total=total)
-        )
+        ratio = value / scrollbar.maximum()
+        if ratio > 0.75 and self.visible_count < len(self.filtered_games):
+            self._load_more()
 
-    def _update_page_buttons(self, total_pages: int):
-        """更新翻页按钮状态"""
-        has_pages = total_pages > 0
-        self.prev_page_btn.setEnabled(has_pages and self.current_page > 1)
-        self.next_page_btn.setEnabled(has_pages and self.current_page < total_pages)
+    def _load_more(self):
+        """加载下一批游戏"""
+        old_count = self.visible_count
+        new_count = min(old_count + self.batch_size, len(self.filtered_games))
+        if new_count <= old_count:
+            return
+
+        current_game = self.get_current_game()
+        self.list_widget.setUpdatesEnabled(False)
+
+        for game in self.filtered_games[old_count:new_count]:
+            self._render_game_item(game)
+
+        self.visible_count = new_count
+        self.list_widget.setUpdatesEnabled(True)
+        self._restore_current_item(current_game)
+        self.update_count_label()
+
+    def _render_game_item(self, game):
+        """渲染单个游戏列表项"""
+        item_text = game.game
+        if game.platform:
+            item_text += f" [{game.platform}]"
+        if game.is_file_missing:
+            item_text = f"⚠ {item_text}"
+
+        item = QListWidgetItem(item_text)
+
+        logo_path = game.get_logo_path()
+        if logo_path and logo_path.exists():
+            item.setIcon(QIcon(str(logo_path)))
+
+        if game.is_file_missing:
+            item.setForeground(QColor("#ff4d4f"))
+
+        if game in self.selected_games:
+            bg, fg = self._get_selection_colors()
+            item.setBackground(bg)
+            item.setForeground(fg)
+
+        item.setData(Qt.UserRole, game)
+        self.list_widget.addItem(item)
 
     def focus_platform_combo(self):
         """聚焦平台选择框并展开"""
@@ -328,33 +266,12 @@ class GameListWidget(QWidget):
         prev_idx = (current - 1 + count) % count
         self.platform_combo.setCurrentIndex(prev_idx)
 
-    def next_page(self):
-        """下一页"""
-        total_pages = (len(self.filtered_games) + self.page_size - 1) // self.page_size if self.filtered_games else 0
-        if self.current_page < total_pages:
-            self.current_page += 1
-            self.update_list()
-            # 选中第一项并聚焦
-            if self.list_widget.count() > 0:
-                self.list_widget.setCurrentRow(0)
-            self.list_widget.setFocus()
-
-    def prev_page(self):
-        """上一页"""
-        if self.current_page > 1:
-            self.current_page -= 1
-            self.update_list()
-            # 选中第一项并聚焦
-            if self.list_widget.count() > 0:
-                self.list_widget.setCurrentRow(0)
-            self.list_widget.setFocus()
-
     def update_count_label(self):
         """更新计数标签"""
         total = len(self.filtered_games)
         selected = len(self.selected_games)
         self.count_label.setText(tr("game_count_label", total=total, selected=selected))
-    
+
     def set_platforms(self, platforms: List[str]):
         """更新平台下拉列表"""
         self.platform_combo.blockSignals(True)
@@ -368,7 +285,7 @@ class GameListWidget(QWidget):
         self.platform_combo.setCurrentIndex(0)
         self.platform_combo.blockSignals(False)
         self._adjust_platform_combo_width(max_text)
-        self.apply_filters(show_loading=True, message=tr("refreshing_platforms"))
+        self.apply_filters()
 
     def _adjust_platform_combo_width(self, max_text: str):
         """根据最长平台名称调整下拉宽度"""
@@ -382,62 +299,43 @@ class GameListWidget(QWidget):
             view.setMinimumWidth(width + 20)
         except Exception:
             pass
-    
+
     def on_search_text_changed(self, text: str):
         """搜索框文本变更事件"""
         self.filter_text = text or ""
-        self.apply_filters(show_loading=True, message=tr("filtering"))
-    
+        self.apply_filters()
+
     def on_platform_changed(self, index: int):
         """平台下拉选择变更"""
-        self.apply_filters(show_loading=True, message=tr("filtering"))
-        # 选择平台后将焦点移至游戏列表，方便快速浏览
+        self.apply_filters()
         self.list_widget.setFocus()
         self.platform_changed.emit(self.get_current_platform() or "")
-    
-    def apply_filters(self, show_loading: bool = False, message: str = ""):
+
+    def apply_filters(self):
         """应用搜索与平台筛选"""
-        if show_loading:
-            self._start_loading(message or tr("loading_games"))
-        try:
-            self.current_page = 1
-            text = (self.filter_text or "").strip().lower()
-            selected_platform = self.platform_combo.currentData()
-            filtered = []
-            for game in self.games:
-                platform_name = (game.platform or "")
-                if selected_platform and platform_name != selected_platform:
+        text = (self.filter_text or "").strip().lower()
+        selected_platform = self.platform_combo.currentData()
+        filtered = []
+        for game in self.games:
+            platform_name = (game.platform or "")
+            if selected_platform and platform_name != selected_platform:
+                continue
+            if text:
+                developer = (game.developer or "")
+                if (text not in game.game.lower() and
+                    text not in platform_name.lower() and
+                    text not in developer.lower()):
                     continue
-                if text:
-                    developer = (game.developer or "")
-                    if (text not in game.game.lower() and
-                        text not in platform_name.lower() and
-                        text not in developer.lower()):
-                        continue
-                filtered.append(game)
-            self.filtered_games = filtered
-            self.update_list()
-        finally:
-            if show_loading:
-                self._finish_loading()
-    
+            filtered.append(game)
+        self.filtered_games = filtered
+        self.update_list()
+
     def on_selection_changed(self, current, previous):
         """列表选择改变事件"""
-        # 停止之前的计时器
-        self.autoplay_timer.stop()
-        
         if current:
             game = current.data(Qt.UserRole)
             self.game_selected.emit(game)
-            # 开启新的计时器
-            self.autoplay_timer.start()
-            
-    def _on_autoplay_timeout(self):
-        """计时器到时，触发自动播放"""
-        current_game = self.get_current_game()
-        if current_game:
-            self.game_activated.emit(current_game)
-    
+
     def get_current_game(self) -> Game:
         """获取当前选中的游戏"""
         current = self.list_widget.currentItem()
@@ -448,7 +346,7 @@ class GameListWidget(QWidget):
     def get_current_platform(self) -> str:
         """获取当前选择的平台"""
         return self.platform_combo.currentData()
-    
+
     def on_item_double_clicked(self, item: QListWidgetItem):
         """双击列表项：切换选择并播放视频"""
         if not item:
@@ -459,44 +357,32 @@ class GameListWidget(QWidget):
         self.game_activated.emit(game)
 
     def toggle_selection(self):
-        """切换当前游戏的选择状态"""
+        """切换当前游戏的选择状态（发送信号让面板处理）"""
         current_game = self.get_current_game()
         if not current_game:
             return
-        
+
         if current_game in self.selected_games:
             self.selected_games.remove(current_game)
-            if self.task_queue:
-                self.task_queue.remove_task(current_game)
         else:
             if self.duplicate_checker and self.duplicate_checker(current_game):
                 QMessageBox.warning(self, tr("info"), tr("duplicate_warning"))
                 return
             self.selected_games.add(current_game)
-            if self.task_queue:
-                self.task_queue.add_task(TaskType.ADD, current_game)
-        
+
         self.update_list()
         self.selection_changed.emit(self.selected_games)
-        
-        # 强制更新一下列表项的选中状态显示
-        for i in range(self.list_widget.count()):
-            item = self.list_widget.item(i)
-            game = item.data(Qt.UserRole)
-            if game == current_game:
-                self.list_widget.setCurrentItem(item)
-                break
-    
+
     def get_selected_games(self) -> Set[Game]:
         """获取所有选中的游戏"""
         return self.selected_games
-    
+
     def clear_selection(self):
         """清空选择"""
         self.selected_games.clear()
         self.update_list()
         self.selection_changed.emit(self.selected_games)
-    
+
     def select_all(self):
         """全选当前列表中的游戏"""
         for game in self.filtered_games:
@@ -504,7 +390,7 @@ class GameListWidget(QWidget):
             if self.duplicate_checker and self.duplicate_checker(game):
                 continue
             self.selected_games.add(game)
-        
+
         self.update_list()
         self.selection_changed.emit(self.selected_games)
 

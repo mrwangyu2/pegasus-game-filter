@@ -58,7 +58,7 @@ class SourcePanel(QWidget):
         layout.addWidget(self.game_list)
 
         # 计数标签
-        self.count_label = QLabel()
+        self.count_label = QLabel(tr("game_count_label", total=0, selected=0))
         layout.addWidget(self.count_label)
 
         # 快捷键
@@ -68,6 +68,8 @@ class SourcePanel(QWidget):
     def set_games(self, games):
         self.games = games
         self.game_list.set_games(games)
+        self.count_label.setText(tr("game_count_label",
+            total=len(games), selected=0))
 
     def set_platforms(self, platforms):
         self.platform_combo.blockSignals(True)

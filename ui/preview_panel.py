@@ -172,8 +172,7 @@ class PreviewPanel(QWidget):
                     self.playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(full_path))))
                     self.playlist.setCurrentIndex(0)
                     self.video_widget.show()
-                    # 不自动播放，避免 DirectShow 解码器问题导致崩溃
-                    # 用户可以点击视频区域手动播放
+                    self.media_player.play()
                     return
                 except Exception:
                     self._video_init_failed = True

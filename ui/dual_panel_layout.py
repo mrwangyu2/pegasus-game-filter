@@ -1,12 +1,13 @@
 """
 双栏布局容器
 """
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter, QMessageBox
 from PyQt5.QtCore import Qt, pyqtSignal
 from ui.source_panel import SourcePanel
 from ui.collection_panel import CollectionPanel
 from ui.operate_bar import OperateBar
 from ui.preview_panel import PreviewPanel
+from core.i18n import tr
 
 
 class DualPanelLayout(QWidget):
@@ -57,6 +58,8 @@ class DualPanelLayout(QWidget):
         self.source_panel.game_selected.connect(self._on_source_game_selected)
         self.source_panel.game_activated.connect(self._on_game_activated)
         self.source_panel.selection_changed.connect(self._on_source_selection_changed)
+        self.source_panel.platform_combo.currentIndexChanged.connect(
+            self._on_source_platform_changed)
 
         # 收藏面板 → 布局信号
         self.collection_panel.game_selected.connect(self._on_collection_game_selected)
@@ -76,6 +79,26 @@ class DualPanelLayout(QWidget):
         self.operate_bar.set_copy_enabled(False)
         self.operate_bar.set_delete_enabled(False)
 
+    def _on_source_platform_changed(self, index):
+        """来源面板平台切换 → 收藏面板同步切换（确认后）"""
+        # 收藏面板未加载数据时不触发
+        if not self.collection_panel.games:
+            return
+
+        platform = self.source_panel.platform_combo.currentData() or ""
+        dest_combo = self.collection_panel.platform_combo
+        idx = dest_combo.findData(platform)
+        if idx < 0 or idx == dest_combo.currentIndex():
+            return
+
+        platform_name = platform if platform else tr("all_platforms")
+        reply = QMessageBox.question(
+            self, tr("info"),
+            f"是否将收藏面板也切换到「{platform_name}」？",
+            QMessageBox.Yes | QMessageBox.No, QMessageBox.Yes)
+        if reply == QMessageBox.Yes:
+            dest_combo.setCurrentIndex(idx)
+
     def _on_source_game_selected(self, game):
         self.game_selected.emit(game)
         self.preview_panel.show_game(game, editable=False)
@@ -88,13 +111,20 @@ class DualPanelLayout(QWidget):
         self.game_activated.emit(game)
 
     def _on_source_selection_changed(self, games):
-        self.operate_bar.set_copy_enabled(len(games) > 0)
+        # 只统计未收藏的游戏数量来决定按钮状态
+        new_games = [g for g in games if not self.source_panel.game_list.existing_checker
+                     or not self.source_panel.game_list.existing_checker(g)]
+        self.operate_bar.set_copy_enabled(len(new_games) > 0)
 
     def _on_collection_selection_changed(self, games):
         self.operate_bar.set_delete_enabled(len(games) > 0)
 
     def _on_copy(self):
         games = self.source_panel.get_selected_games()
+        # 只复制未收藏的游戏
+        checker = self.source_panel.game_list.existing_checker
+        if checker:
+            games = [g for g in games if not checker(g)]
         if games:
             self.copy_requested.emit(games)
 
@@ -103,18 +133,30 @@ class DualPanelLayout(QWidget):
         if games:
             self.delete_requested.emit(games)
 
-    def load_source(self, games, platforms, existing_checker):
+    def load_source(self, games, platforms, existing_checker, directory=""):
         """加载来源面板数据"""
+        self.source_panel.set_existing_checker(existing_checker)
         self.source_panel.set_games(games)
         self.source_panel.set_platforms(platforms)
-        self.source_panel.set_existing_checker(existing_checker)
+        if directory:
+            self.source_panel.set_directory(directory)
 
-    def load_collection(self, games, platforms, modified_marker=None):
+    def load_collection(self, games, platforms, modified_marker=None, directory=""):
         """加载收藏面板数据"""
-        self.collection_panel.set_games(games)
+        current_platform = self.collection_panel.platform_combo.currentData()
         self.collection_panel.set_platforms(platforms)
+        if current_platform:
+            idx = self.collection_panel.platform_combo.findData(current_platform)
+            if idx >= 0:
+                self.collection_panel.platform_combo.blockSignals(True)
+                self.collection_panel.platform_combo.setCurrentIndex(idx)
+                self.collection_panel.platform_combo.blockSignals(False)
+                self.collection_panel.game_list.set_platform_filter(current_platform or "")
+        self.collection_panel.set_games(games)
         if modified_marker:
             self.collection_panel.set_modified_marker(modified_marker)
+        if directory:
+            self.collection_panel.set_directory(directory)
 
     def refresh_collection(self, games, platforms):
         """刷新收藏面板"""

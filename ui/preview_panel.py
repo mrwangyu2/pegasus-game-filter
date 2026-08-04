@@ -3,7 +3,7 @@
 """
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QTextEdit, QPushButton)
-from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QEvent
+from PyQt5.QtCore import pyqtSignal, Qt, QUrl, QEvent, QTimer
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaContent, QMediaPlaylist
 from PyQt5.QtMultimediaWidgets import QVideoWidget
@@ -23,6 +23,11 @@ class PreviewPanel(QWidget):
         self._collapsed = True
         self._init_ui()
         self.setVisible(False)
+
+        self._video_timer = QTimer()
+        self._video_timer.setSingleShot(True)
+        self._video_timer.setInterval(3000)
+        self._video_timer.timeout.connect(self._on_video_delay)
 
     def _init_ui(self):
         main_layout = QVBoxLayout()
@@ -132,7 +137,8 @@ class PreviewPanel(QWidget):
         self.desc_edit.setReadOnly(not editable)
 
         self._load_cover(game)
-        self._load_video(game)
+        self._stop_playback()
+        self._video_timer.start()
 
         self.edit_btn.setVisible(editable)
 
@@ -141,14 +147,20 @@ class PreviewPanel(QWidget):
         self.stop_video()
 
     def stop_video(self):
+        self._video_timer.stop()
+        self._stop_playback()
+
+    def _stop_playback(self):
         try:
-            if self.media_player:
-                self.media_player.stop()
-                self.media_player.setMedia(QMediaContent())
-            if self.playlist:
-                self.playlist.clear()
+            self.media_player.stop()
+            self.playlist.clear()
         except Exception:
             pass
+        self.video_widget.hide()
+
+    def _on_video_delay(self):
+        if self.current_game:
+            self._load_video(self.current_game)
 
     def _load_cover(self, game):
         cover_path = game.get_boxfront_path()

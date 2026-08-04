@@ -7,7 +7,7 @@ import shlex
 import shutil
 from PyQt5.QtWidgets import (QMainWindow, QWidget, QAction, QFileDialog,
                              QMessageBox, QInputDialog, QApplication,
-                             QProgressDialog, QMenu, QLabel)
+                             QProgressDialog, QProgressBar, QMenu, QLabel)
 from PyQt5.QtCore import Qt, QSettings, QTimer
 from PyQt5.QtGui import QKeySequence
 from core.project import Project
@@ -59,6 +59,14 @@ class MainWindow(QMainWindow):
 
         self.status_label = QLabel(tr("status_no_project"))
         self.statusBar().addWidget(self.status_label)
+
+        self.load_progress = QProgressBar()
+        self.load_progress.setMaximumWidth(200)
+        self.load_progress.setMaximumHeight(16)
+        self.load_progress.setTextVisible(True)
+        self.load_progress.setFormat("%v/%m")
+        self.load_progress.hide()
+        self.statusBar().addPermanentWidget(self.load_progress)
 
     def create_menu_bar(self):
         menubar = self.menuBar()
@@ -204,25 +212,49 @@ class MainWindow(QMainWindow):
 
     def init_managers(self):
         try:
+            self.load_progress.setMaximum(4)
+            self.load_progress.setValue(0)
+            self.load_progress.setFormat("加载来源... %v/%m")
+            self.load_progress.show()
+            QApplication.processEvents()
+
             self.source_manager = GameManager(self.project.source_path)
             self.source_manager.load_all_platforms()
+
+            self.load_progress.setValue(1)
+            self.load_progress.setFormat("加载收藏... %v/%m")
+            QApplication.processEvents()
 
             self.project.roms_path.mkdir(parents=True, exist_ok=True)
             self.collection_manager = GameManager(self.project.roms_path)
             self.collection_manager.load_all_platforms()
 
+            self.load_progress.setValue(2)
+            self.load_progress.setFormat("渲染来源... %v/%m")
+            QApplication.processEvents()
+
             self.dual_panel.load_source(
                 self.source_manager.get_all_games(),
                 self.source_manager.get_platform_names(),
-                lambda g: self.collection_manager.has_game(g)
-            )
-            self.dual_panel.load_collection(
-                self.collection_manager.get_all_games(),
-                self.collection_manager.get_platform_names()
+                lambda g: self.collection_manager.has_game(g),
+                str(self.project.source_path) if self.project.source_path else ""
             )
 
+            self.load_progress.setValue(3)
+            self.load_progress.setFormat("渲染收藏... %v/%m")
+            QApplication.processEvents()
+
+            self.dual_panel.load_collection(
+                self.collection_manager.get_all_games(),
+                self.collection_manager.get_platform_names(),
+                directory=str(self.project.roms_path) if self.project.roms_path else ""
+            )
+
+            self.load_progress.setValue(4)
+            self.load_progress.hide()
             self.status_label.setText(tr("status_project", name=self.project.name))
         except Exception as e:
+            self.load_progress.hide()
             QMessageBox.critical(self, tr("error"), tr("msg_init_failed", error=str(e)))
 
     # ─── 核心操作：复制 / 删除 ───
@@ -261,6 +293,7 @@ class MainWindow(QMainWindow):
             self.collection_manager.get_all_games(),
             self.collection_manager.get_platform_names()
         )
+        self.dual_panel.source_panel.game_list.apply_filters()
         self.statusBar().showMessage(tr("copy_complete", count=count), 3000)
 
     def delete_games(self, games):
@@ -295,6 +328,7 @@ class MainWindow(QMainWindow):
             self.collection_manager.get_all_games(),
             self.collection_manager.get_platform_names()
         )
+        self.dual_panel.collection_panel.game_list.clear_selection()
         self.statusBar().showMessage(tr("delete_complete", count=count), 3000)
 
     # ─── 辅助功能 ───

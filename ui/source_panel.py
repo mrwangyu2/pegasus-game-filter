@@ -7,6 +7,7 @@ from PyQt5.QtCore import pyqtSignal, Qt, QTimer
 from PyQt5.QtGui import QKeySequence
 from ui.game_list_widget import GameListWidget
 from core.i18n import tr
+from core.metadata_parser import get_total_rom_size, format_size
 
 
 class SourcePanel(QWidget):
@@ -34,8 +35,13 @@ class SourcePanel(QWidget):
 
         # 标题
         title_label = QLabel("📂 " + tr("source_title"))
-        title_label.setStyleSheet("font-size: 14px; font-weight: bold; padding: 4px;")
+        title_label.setStyleSheet("font-size: 14px; font-weight: bold; padding: 4px 4px 0 4px;")
         layout.addWidget(title_label)
+
+        self.dir_label = QLabel()
+        self.dir_label.setStyleSheet("color: #888; font-size: 11px; padding: 0 4px 4px 4px;")
+        self.dir_label.setWordWrap(True)
+        layout.addWidget(self.dir_label)
 
         # 搜索与平台过滤
         filter_layout = QHBoxLayout()
@@ -68,8 +74,10 @@ class SourcePanel(QWidget):
     def set_games(self, games):
         self.games = games
         self.game_list.set_games(games)
-        self.count_label.setText(tr("game_count_label",
-            total=len(games), selected=0))
+        self._update_count_label()
+
+    def set_directory(self, path: str):
+        self.dir_label.setText(str(path))
 
     def set_platforms(self, platforms):
         self.platform_combo.blockSignals(True)
@@ -110,11 +118,13 @@ class SourcePanel(QWidget):
     def _on_search(self, text):
         self.game_list.filter_text = text
         self.game_list.apply_filters()
+        self._update_count_label()
 
     def _on_platform_changed(self, index):
         self.game_list.set_platform_filter(self.platform_combo.currentData() or "")
         self.game_list.apply_filters()
         self.game_list.list_widget.setFocus()
+        self._update_count_label()
 
     def _on_game_selected(self, game):
         self.autoplay_timer.stop()
@@ -129,12 +139,21 @@ class SourcePanel(QWidget):
         if current:
             self.game_activated.emit(current)
 
+    def _update_count_label(self):
+        filtered_set = set(self.game_list.filtered_games)
+        selected_games = self.game_list.selected_games & filtered_set
+        total_bytes = get_total_rom_size(self.game_list.filtered_games)
+        selected_bytes = get_total_rom_size(selected_games)
+        self.count_label.setText(tr("game_count_label",
+            total=len(self.game_list.filtered_games),
+            selected=len(selected_games),
+            selected_size=format_size(selected_bytes),
+            total_size=format_size(total_bytes)))
+
     def _on_selection_changed(self, selected):
         games = list(selected)
         self.selection_changed.emit(games)
-        self.count_label.setText(tr("game_count_label",
-            total=len(self.game_list.filtered_games),
-            selected=len(games)))
+        self._update_count_label()
 
     def _focus_search(self):
         self.search_box.setFocus()

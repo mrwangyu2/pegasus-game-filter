@@ -12,7 +12,7 @@ class Translator:
     # 翻译字典
     TRANSLATIONS = {
         LANG_ZH: {
-            "app_title": "天马G游戏筛选器 v1.0",
+            "app_title": "天马G游戏筛选器 v1.2",
             "menu_file": "文件(&F)",
             "menu_new_project": "新建项目(&N)",
             "menu_open_project": "打开项目(&O)",
@@ -68,7 +68,7 @@ class Translator:
             "platform_label": "平台:",
             "all_platforms": "全部平台",
             "search_placeholder": "输入游戏名称、平台或开发者...",
-            "game_count_label": "游戏数量: {total} | 已选择: {selected}",
+            "game_count_label": "游戏数量: {total} | 已选择: {selected} | 磁盘占用: {selected_size} / {total_size}",
             "pagination_label": "分页: {current}/{total_pages} | 显示 {start}-{end} / {total}",
             "prev_page": "上一页",
             "next_page": "下一页",
@@ -149,7 +149,7 @@ class Translator:
             "play_video": "播放视频"
         },
         LANG_EN: {
-            "app_title": "Pegasus Game Filter v1.0",
+            "app_title": "Pegasus Game Filter v1.2",
             "menu_file": "File(&F)",
             "menu_new_project": "New Project(&N)",
             "menu_open_project": "Open Project(&O)",
@@ -204,7 +204,7 @@ class Translator:
             "platform_label": "Platform:",
             "all_platforms": "All Platforms",
             "search_placeholder": "Search by name, platform, or developer...",
-            "game_count_label": "Games: {total} | Selected: {selected}",
+            "game_count_label": "Games: {total} | Selected: {selected} | Disk: {selected_size} / {total_size}",
             "pagination_label": "Page: {current}/{total_pages} | Showing {start}-{end} of {total}",
             "prev_page": "Previous",
             "next_page": "Next",

@@ -2,11 +2,11 @@
 游戏列表组件（复选框模式）
 """
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QListWidget, QListWidgetItem,
-                             QMessageBox)
+                             QMessageBox, QProgressBar, QApplication)
 from PyQt5.QtCore import Qt, pyqtSignal, QSize, QEvent, QTimer
 from PyQt5.QtGui import QIcon, QColor
 from typing import List, Set
-from core.metadata_parser import Game
+from core.metadata_parser import Game, get_rom_size, format_size
 from core.i18n import tr
 
 
@@ -37,6 +37,7 @@ class GameListWidget(QWidget):
         self.setMinimumWidth(380)
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
         self.setLayout(layout)
 
         self.list_widget = QListWidget()
@@ -52,12 +53,23 @@ class GameListWidget(QWidget):
         self.setFocusProxy(self.list_widget)
         layout.addWidget(self.list_widget)
 
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximumHeight(4)
+        self.progress_bar.setTextVisible(False)
+        self.progress_bar.hide()
+        layout.addWidget(self.progress_bar)
+
     def retranslate_ui(self):
         pass
 
     def set_games(self, games: List[Game]):
         self.games = games
         self.selected_games.clear()
+        checker = self.duplicate_checker or self.existing_checker
+        if checker:
+            for game in games:
+                if checker(game):
+                    self.selected_games.add(game)
         self.apply_filters()
 
     def set_duplicate_checker(self, checker):
@@ -79,17 +91,27 @@ class GameListWidget(QWidget):
         load_count = min(self.batch_size, total)
         self.visible_count = load_count
 
+        self.progress_bar.setMaximum(load_count)
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+
         current_game = self.get_current_game()
         self.list_widget.setUpdatesEnabled(False)
         self._updating_checks = True
         self.list_widget.clear()
 
-        for game in self.filtered_games[:load_count]:
+        for i, game in enumerate(self.filtered_games[:load_count]):
             self._render_game_item(game)
+            if i % 50 == 0:
+                self.progress_bar.setValue(i)
+                QApplication.processEvents()
 
+        self.progress_bar.setValue(load_count)
         self._updating_checks = False
         self.list_widget.setUpdatesEnabled(True)
         self._restore_current_item(current_game)
+        self.selection_changed.emit(self.selected_games)
+        self.progress_bar.hide()
 
         scrollbar = self.list_widget.verticalScrollBar()
         try:
@@ -120,27 +142,46 @@ class GameListWidget(QWidget):
         if new_count <= old_count:
             return
 
+        self.progress_bar.setMaximum(new_count - old_count)
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+
         current_game = self.get_current_game()
         self.list_widget.setUpdatesEnabled(False)
         self._updating_checks = True
 
-        for game in self.filtered_games[old_count:new_count]:
+        for i, game in enumerate(self.filtered_games[old_count:new_count]):
             self._render_game_item(game)
+            if i % 50 == 0:
+                self.progress_bar.setValue(i)
+                QApplication.processEvents()
 
         self.visible_count = new_count
+        self.progress_bar.setValue(new_count - old_count)
         self._updating_checks = False
         self.list_widget.setUpdatesEnabled(True)
         self._restore_current_item(current_game)
+        self.progress_bar.hide()
 
     def _render_game_item(self, game):
         text = game.game
         if game.platform:
             text += f"  [{game.platform}]"
+        rom_size = get_rom_size(game)
+        if rom_size > 0:
+            text += f"  ({format_size(rom_size)})"
         if game.is_file_missing:
             text = f"⚠ {text}"
 
         item = QListWidgetItem(text)
         item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+
+        # 已存在于收藏中的游戏自动勾选
+        checker = self.duplicate_checker or self.existing_checker
+        exists = checker and checker(game)
+        if exists:
+            self.selected_games.add(game)
+
         item.setCheckState(Qt.Checked if game in self.selected_games else Qt.Unchecked)
         item.setData(Qt.UserRole, game)
 
@@ -151,9 +192,7 @@ class GameListWidget(QWidget):
         if game.is_file_missing:
             item.setForeground(QColor("#ff4d4f"))
 
-        # 已存在于目标中的游戏置灰
-        checker = self.duplicate_checker or self.existing_checker
-        if checker and checker(game):
+        if exists:
             item.setForeground(QColor("#999999"))
             f = item.font()
             f.setItalic(True)
@@ -197,13 +236,6 @@ class GameListWidget(QWidget):
         if not game:
             return
         if item.checkState() == Qt.Checked:
-            checker = self.duplicate_checker or self.existing_checker
-            if checker and checker(game):
-                QMessageBox.warning(self, tr("info"), tr("duplicate_warning"))
-                self._updating_checks = True
-                item.setCheckState(Qt.Unchecked)
-                self._updating_checks = False
-                return
             self.selected_games.add(game)
         else:
             self.selected_games.discard(game)
@@ -241,9 +273,6 @@ class GameListWidget(QWidget):
 
     def select_all(self):
         for game in self.filtered_games:
-            checker = self.duplicate_checker or self.existing_checker
-            if checker and checker(game):
-                continue
             self.selected_games.add(game)
         self._updating_checks = True
         for i in range(self.list_widget.count()):

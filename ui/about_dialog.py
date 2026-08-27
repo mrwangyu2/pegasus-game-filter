@@ -47,7 +47,7 @@ class AboutDialog(QDialog):
         layout.addWidget(title_label)
         
         # 版本信息
-        version_label = QLabel("版本 1.0.0")
+        version_label = QLabel("版本 1.2")
         version_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(version_label)
         

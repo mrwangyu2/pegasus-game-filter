@@ -6,6 +6,42 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 
 
+def get_total_rom_size(games) -> int:
+    """计算游戏中ROM文件的总磁盘占用（字节）"""
+    total = 0
+    for game in games:
+        if game.platform_path and game.file:
+            file_path = game.platform_path / game.file
+            try:
+                total += file_path.stat().st_size
+            except OSError:
+                pass
+    return total
+
+
+def get_rom_size(game) -> int:
+    """获取单个游戏的ROM文件大小（字节），文件不存在则返回0"""
+    if game.platform_path and game.file:
+        file_path = game.platform_path / game.file
+        try:
+            return file_path.stat().st_size
+        except OSError:
+            return 0
+    return 0
+
+
+def format_size(size_bytes: int) -> str:
+    """将字节数格式化为人类可读的字符串"""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.1f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.1f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
+
+
 class Game:
     """游戏元数据类"""
     

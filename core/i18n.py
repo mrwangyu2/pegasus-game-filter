@@ -12,7 +12,7 @@ class Translator:
     # 翻译字典
     TRANSLATIONS = {
         LANG_ZH: {
-            "app_title": "天马G游戏筛选器 v1.0",
+            "app_title": "天马G游戏筛选器 v1.2",
             "menu_file": "文件(&F)",
             "menu_new_project": "新建项目(&N)",
             "menu_open_project": "打开项目(&O)",
@@ -68,7 +68,7 @@ class Translator:
             "platform_label": "平台:",
             "all_platforms": "全部平台",
             "search_placeholder": "输入游戏名称、平台或开发者...",
-            "game_count_label": "游戏数量: {total} | 已选择: {selected}",
+            "game_count_label": "游戏数量: {total} | 已选择: {selected} | 磁盘占用: {selected_size} / {total_size}",
             "pagination_label": "分页: {current}/{total_pages} | 显示 {start}-{end} / {total}",
             "prev_page": "上一页",
             "next_page": "下一页",
@@ -137,10 +137,19 @@ class Translator:
             "log_finished": "任务执行完成",
             "log_failed": "任务执行失败: {error}",
             "warning": "警告",
-            "success": "成功"
+            "success": "成功",
+            "source_title": "来源 ROM",
+            "collection_title": "收藏 ROM",
+            "preview_panel": "预览面板",
+            "copy_complete": "已复制 {count} 个游戏",
+            "delete_complete": "已删除 {count} 个游戏",
+            "confirm_delete_title": "确认删除",
+            "confirm_delete_msg": "确认删除以下游戏？ROM 文件和媒体资源将被永久删除。\n\n{names}",
+            "run_game": "运行游戏",
+            "play_video": "播放视频"
         },
         LANG_EN: {
-            "app_title": "Pegasus Game Filter v1.0",
+            "app_title": "Pegasus Game Filter v1.2",
             "menu_file": "File(&F)",
             "menu_new_project": "New Project(&N)",
             "menu_open_project": "Open Project(&O)",
@@ -195,7 +204,7 @@ class Translator:
             "platform_label": "Platform:",
             "all_platforms": "All Platforms",
             "search_placeholder": "Search by name, platform, or developer...",
-            "game_count_label": "Games: {total} | Selected: {selected}",
+            "game_count_label": "Games: {total} | Selected: {selected} | Disk: {selected_size} / {total_size}",
             "pagination_label": "Page: {current}/{total_pages} | Showing {start}-{end} of {total}",
             "prev_page": "Previous",
             "next_page": "Next",
@@ -264,7 +273,16 @@ class Translator:
             "log_finished": "Execution finished",
             "log_failed": "Execution failed: {error}",
             "warning": "Warning",
-            "success": "Success"
+            "success": "Success",
+            "source_title": "Source ROMs",
+            "collection_title": "Collection ROMs",
+            "preview_panel": "Preview Panel",
+            "copy_complete": "Copied {count} game(s)",
+            "delete_complete": "Deleted {count} game(s)",
+            "confirm_delete_title": "Confirm Delete",
+            "confirm_delete_msg": "Delete the following games? ROM files and media will be permanently deleted.\n\n{names}",
+            "run_game": "Run Game",
+            "play_video": "Play Video"
         }
     }
 
